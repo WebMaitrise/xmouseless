@@ -195,12 +195,16 @@ void listen_key(KeySym key)
 {
     KeyCode key_code = XKeysymToKeycode(dpy, key);
     XGrabKey(dpy, key_code, 0, root, True, GrabModeAsync, GrabModeAsync);
+    XGrabKey(dpy, key_code, ControlMask, root, True, GrabModeAsync, GrabModeAsync);
+    XGrabKey(dpy, key_code, ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
 }
 
 void stop_listen_key(KeySym key)
 {
     KeyCode key_code = XKeysymToKeycode(dpy, key);
     XUngrabKey(dpy, key_code, 0, root);
+    XGrabKey(dpy, key_code, ControlMask, root, True, GrabModeAsync, GrabModeAsync);
+    XGrabKey(dpy, key_code, ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
 }
 
 void tap(KeySym key)
@@ -251,95 +255,54 @@ void handle_key(KeyCode keycode, Bool is_press)
     if (keysym == XK_d)
     {
         mouse_mode = is_press;
-
-        // if (is_press)
-        // {
-        //     listen_key(XK_i);
-        //     listen_key(XK_j);
-        //     listen_key(XK_k);
-        //     listen_key(XK_l);
-        // }
-        // else
-        // {
-        //     stop_listen_key(XK_i);
-        //     stop_listen_key(XK_j);
-        //     stop_listen_key(XK_k);
-        //     stop_listen_key(XK_l);
-        // }
-
-        // if (is_press)
-        // {
-        //     XGrabKeyboard(dpy, root, False, GrabModeAsync,
-        //                   GrabModeAsync, CurrentTime);
-        // }
-
-        // if (!is_press)
-        // {
-        //     XUngrabKeyboard(dpy, CurrentTime);
-        // }
-    }
-
-    if (arrow_mode && is_press && (keysym == XK_i || keysym == XK_j || keysym == XK_k || keysym == XK_l))
-    {
-        stop_listen_key(XK_space);
-
-        KeyCode code = XKeysymToKeycode(dpy, XK_space);
-
-        XTestFakeKeyEvent(dpy, code, False, CurrentTime);
-
-        if (keysym == XK_i)
-            tap(XK_Up);
-        if (keysym == XK_j)
-            tap(XK_Left);
-        if (keysym == XK_k)
-            tap(XK_Down);
-        if (keysym == XK_l)
-            tap(XK_Right);
-
-        listen_key(XK_space);
-        XTestFakeKeyEvent(dpy, code, True, CurrentTime);
     }
 
     if (!mouse_mode && keysym == XK_space)
     {
-        // printf("Enter Arrow Mode !\n");
-        // XAutoRepeatOn(dpy);
-
         if (!is_press)
         {
-
             if (arrow_mode && !arrow_mode_secondary_role_active)
             {
                 stop_listen_key(XK_space);
                 tap(XK_space);
                 listen_key(XK_space);
             }
-
-            // XAutoRepeatOff(dpy);
         }
 
         arrow_mode = is_press;
         arrow_mode_secondary_role_active = False;
     }
 
-    if (arrow_mode && keysym != XK_space)
+    if (arrow_mode)
     {
-        arrow_mode_secondary_role_active = True;
+        Bool is_arrow = keysym == XK_i || keysym == XK_j || keysym == XK_k || keysym == XK_l;
+
+        if (keysym != XK_space)
+        {
+            arrow_mode_secondary_role_active = True;
+        }
+
+        if (is_press && is_arrow)
+        {
+            stop_listen_key(XK_space);
+
+            KeyCode code = XKeysymToKeycode(dpy, XK_space);
+
+            XTestFakeKeyEvent(dpy, code, False, CurrentTime);
+
+            if (keysym == XK_i)
+                tap(XK_Up);
+            if (keysym == XK_j)
+                tap(XK_Left);
+            if (keysym == XK_k)
+                tap(XK_Down);
+            if (keysym == XK_l)
+                tap(XK_Right);
+
+            listen_key(XK_space);
+            XTestFakeKeyEvent(dpy, code, True, CurrentTime);
+        }
     }
-
-    // if (arrow_mode && keysym == XK_space && !is_press)
-    // {
-    //     arrow_mode = False;
-    //     printf("Quit Arrow Mode !\n");
-    //     stop_listen_key(XK_space);
-
-    //     if (!arrow_mode_secondary_role_active)
-    //     {
-    //         tap(XK_space);
-    //     }
-
-    //     listen_key(XK_space);
-    // }
 
     if (mouse_mode)
     {
