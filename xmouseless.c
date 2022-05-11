@@ -202,6 +202,15 @@ void *move_forever(void *val)
     /* this function is executed in a seperate thread */
     while (1)
     {
+        if (!mouse_mode)
+        {
+            mouseinfo.speed_x = 0;
+            mouseinfo.speed_y = 0;
+
+            scrollinfo.speed_x = 0;
+            scrollinfo.speed_y = 0;
+        }
+
         /* move mouse? */
         if (mouseinfo.speed_x != 0 || mouseinfo.speed_y != 0)
         {
@@ -334,18 +343,6 @@ void handle_key(KeyCode keycode, Bool is_press)
                 int sign = is_press ? 1 : -1;
                 scrollinfo.speed_x += sign * scroll_bindings[i].x;
                 scrollinfo.speed_y += sign * scroll_bindings[i].y;
-
-                /* scroll once, workaround for scrolling not working the first time */
-                int scroll_x, scroll_y = 0;
-                if (scrollinfo.speed_x < 0)
-                    scroll_x = -1;
-                if (scrollinfo.speed_x > 0)
-                    scroll_x = 1;
-                if (scrollinfo.speed_y < 0)
-                    scroll_y = -1;
-                if (scrollinfo.speed_y > 0)
-                    scroll_y = 1;
-                scroll(scroll_x, scroll_y);
             }
         }
     }

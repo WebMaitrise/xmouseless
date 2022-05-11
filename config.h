@@ -1,7 +1,7 @@
 
 /* the rate at which the mouse moves in Hz
  * does not change its speed */
-static const unsigned int move_rate = 50;
+static const unsigned int move_rate = 60;
 
 /* the default speed of the mouse pointer
  * in pixels per second */
@@ -13,8 +13,6 @@ static SpeedBinding speed_bindings[] = {
     {XK_space, 1500},
     {XK_Super_L, 500},
     {XK_Alt_L, 200},
-    // { XK_a,            100  },
-    // { XK_Control_L,    10   },
 };
 
 /* moves the mouse pointer
@@ -32,23 +30,18 @@ static MoveBinding move_bindings[] = {
  * 3: right */
 static ClickBinding click_bindings[] = {
     /* key         button */
-    // { XK_space,    1 },
     {XK_f, 1},
     {XK_s, 3},
-    // { XK_s,        3 },
 };
 
 /* scrolls up, down, left and right
  * a higher value scrolls faster */
 static ScrollBinding scroll_bindings[] = {
     /* key        x      y */
-    {XK_h, 0, 25},
-    {XK_y, 0, -25},
-    // { XK_plus,     0 ,    80 },
-    // { XK_minus,    0 ,   -80 },
-    // { XK_h,        25,    0  },
-    // { XK_g,       -25,    0  },
-};
+    {XK_h, 0, 50},
+    {XK_y, 0, -50},
+    {XK_u, -50, 0},
+    {XK_o, 50, 0}};
 
 /* executes shell commands */
 // static ShellBinding shell_bindings[] = {
