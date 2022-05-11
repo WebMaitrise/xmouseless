@@ -56,6 +56,7 @@ static unsigned int speed;
 static unsigned Bool mouse_mode = False;
 static unsigned Bool arrow_mode = False;
 static unsigned Bool arrow_mode_secondary_role_active = False;
+static unsigned Bool mouse_mode_secondary_role_active = False;
 
 struct
 {
@@ -78,7 +79,6 @@ void move_relative(float x, float y);
 void click(unsigned int button, Bool is_press);
 void click_full(unsigned int button);
 void scroll(float x, float y);
-// void arrow_up(Bool is_press);
 void handle_key(KeyCode keycode, Bool is_press);
 void init_x();
 void close_x();
@@ -105,17 +105,6 @@ void move_relative(float x, float y)
                  (int)mouseinfo.x, (int)mouseinfo.y);
     XFlush(dpy);
 }
-
-// void arrow_up(Bool is_press)
-// {
-//     XUngrabKey(dpy, XK_i, AnyModifier, root);
-//     XUngrabKey(dpy, XK_a, AnyModifier, root);
-//     XFlush(dpy);
-
-//     XTestFakeKeyEvent(dpy, XK_Up, is_press, CurrentTime);
-//     XFlush(dpy);
-//     printf("arrow up\n");
-// }
 
 void click(unsigned int button, Bool is_press)
 {
@@ -158,7 +147,6 @@ void scroll(float x, float y)
 
 void init_x()
 {
-    // int i;
     int screen;
 
     /* initialize support for concurrent threads */
@@ -171,24 +159,9 @@ void init_x()
     /* turn auto key repeat off */
     XAutoRepeatOff(dpy);
 
-    /* grab keys until success */
-    // for (i = 0; i < 100; i++)
-    // {
-    //     if (XGrabKeyboard(dpy, root, False, GrabModeAsync,
-    //                       GrabModeAsync, CurrentTime) == GrabSuccess)
-    //     {
-    //         return;
-    //     }
-    //     usleep(10000);
-    // }
-
-    // printf("grab keyboard failed\n");
-    // close_x(EXIT_FAILURE);
     listen_key(XK_d);
     listen_key(XK_space);
-    listen_key(XK_Escape);
-    // KeyCode space = XKeysymToKeycode(dpy, XK_w);
-    // XGrabKey(dpy, space, AnyModifier, root, False, GrabModeAsync, GrabModeAsync);
+    listen_key(XK_End);
 }
 
 void listen_key(KeySym key)
@@ -254,7 +227,18 @@ void handle_key(KeyCode keycode, Bool is_press)
 
     if (keysym == XK_d)
     {
+        if (!is_press)
+        {
+            if (mouse_mode && !mouse_mode_secondary_role_active)
+            {
+                stop_listen_key(XK_d);
+                tap(XK_d);
+                listen_key(XK_d);
+            }
+        }
+
         mouse_mode = is_press;
+        mouse_mode_secondary_role_active = False;
     }
 
     if (!mouse_mode && keysym == XK_space)
@@ -306,6 +290,11 @@ void handle_key(KeyCode keycode, Bool is_press)
 
     if (mouse_mode)
     {
+        if (keysym != XK_d)
+        {
+            mouse_mode_secondary_role_active = True;
+        }
+
         /* move bindings */
         for (i = 0; i < LENGTH(move_bindings); i++)
         {

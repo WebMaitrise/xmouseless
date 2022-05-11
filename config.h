@@ -10,8 +10,9 @@ static const unsigned int default_speed = 500;
 /* changes the speed of the mouse pointer */
 static SpeedBinding speed_bindings[] = {
     /* key             speed */
-    {XK_Super_L, 3000},
-    {XK_Alt_L, 1500},
+    {XK_space, 1500},
+    {XK_Super_L, 500},
+    {XK_Alt_L, 200},
     // { XK_a,            100  },
     // { XK_Control_L,    10   },
 };
@@ -58,5 +59,5 @@ static ScrollBinding scroll_bindings[] = {
 
 /* exits on key release which allows click and exit with one key */
 static KeySym exit_keys[] = {
-    XK_Escape //, XK_q, XK_space
+    XK_End //, XK_q, XK_space
 };
