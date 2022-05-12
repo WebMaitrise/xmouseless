@@ -52,27 +52,27 @@ Display *dpy;
 Window root;
 pthread_t movethread;
 
+struct mode
+{
+    Bool active;
+    Bool secondary_role;
+} mode_default = {False, False};
+
+typedef struct mode Mode;
+
+struct movement
+{
+    float x;
+    float y;
+    float speed_x;
+    float speed_y;
+};
+
+typedef struct movement Movement;
+
 static unsigned int speed;
-static unsigned Bool mouse_mode = False;
-static unsigned Bool arrow_mode = False;
-static unsigned Bool arrow_mode_secondary_role_active = False;
-static unsigned Bool mouse_mode_secondary_role_active = False;
-
-struct
-{
-    float x;
-    float y;
-    float speed_x;
-    float speed_y;
-} mouseinfo;
-
-struct
-{
-    float x;
-    float y;
-    float speed_x;
-    float speed_y;
-} scrollinfo;
+static Mode arrow_mode, mouse_mode;
+static Movement mouseinfo, scrollinfo;
 
 void get_pointer();
 void move_relative(float x, float y);
@@ -85,6 +85,7 @@ void close_x();
 void listen_key(KeySym key);
 void stop_listen_key(KeySym key);
 void tap(KeySym key);
+void define_secondary_role(KeySym pressed_key, KeySym key, Bool is_press, Mode *mode);
 
 void get_pointer()
 {
@@ -188,6 +189,28 @@ void tap(KeySym key)
     XTestFakeKeyEvent(dpy, code, False, CurrentTime);
 }
 
+void define_secondary_role(KeySym pressed_key, KeySym key, Bool is_press, Mode *mode)
+{
+    if ((*mode).active && pressed_key != key)
+        (*mode).secondary_role = True;
+
+    if (pressed_key == key)
+    {
+        if (!is_press)
+        {
+            if ((*mode).active && !(*mode).secondary_role)
+            {
+                stop_listen_key(key);
+                tap(key);
+                listen_key(key);
+            }
+        }
+
+        (*mode).active = is_press;
+        (*mode).secondary_role = False;
+    }
+}
+
 void close_x(int exit_status)
 {
     /* turn auto repeat on again */
@@ -202,7 +225,7 @@ void *move_forever(void *val)
     /* this function is executed in a seperate thread */
     while (1)
     {
-        if (!mouse_mode)
+        if (!mouse_mode.active)
         {
             mouseinfo.speed_x = 0;
             mouseinfo.speed_y = 0;
@@ -234,46 +257,12 @@ void handle_key(KeyCode keycode, Bool is_press)
 
     keysym = XkbKeycodeToKeysym(dpy, keycode, 0, 0);
 
-    if (keysym == XK_d)
-    {
-        if (!is_press)
-        {
-            if (mouse_mode && !mouse_mode_secondary_role_active)
-            {
-                stop_listen_key(XK_d);
-                tap(XK_d);
-                listen_key(XK_d);
-            }
-        }
+    define_secondary_role(keysym, XK_d, is_press, &mouse_mode);
+    define_secondary_role(keysym, XK_space, is_press, &arrow_mode);
 
-        mouse_mode = is_press;
-        mouse_mode_secondary_role_active = False;
-    }
-
-    if (!mouse_mode && keysym == XK_space)
-    {
-        if (!is_press)
-        {
-            if (arrow_mode && !arrow_mode_secondary_role_active)
-            {
-                stop_listen_key(XK_space);
-                tap(XK_space);
-                listen_key(XK_space);
-            }
-        }
-
-        arrow_mode = is_press;
-        arrow_mode_secondary_role_active = False;
-    }
-
-    if (arrow_mode)
+    if (arrow_mode.active)
     {
         Bool is_arrow = keysym == XK_i || keysym == XK_j || keysym == XK_k || keysym == XK_l;
-
-        if (keysym != XK_space)
-        {
-            arrow_mode_secondary_role_active = True;
-        }
 
         if (is_press && is_arrow)
         {
@@ -297,13 +286,8 @@ void handle_key(KeyCode keycode, Bool is_press)
         }
     }
 
-    if (mouse_mode)
+    if (mouse_mode.active)
     {
-        if (keysym != XK_d)
-        {
-            mouse_mode_secondary_role_active = True;
-        }
-
         /* move bindings */
         for (i = 0; i < LENGTH(move_bindings); i++)
         {
