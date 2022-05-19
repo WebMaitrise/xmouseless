@@ -73,6 +73,8 @@ typedef struct movement Movement;
 static unsigned int speed;
 static Mode arrow_mode, mouse_mode;
 static Movement mouseinfo, scrollinfo;
+static Bool control = False;
+static Bool shift = False;
 
 void get_pointer();
 void move_relative(float x, float y);
@@ -86,6 +88,7 @@ void listen_key(KeySym key);
 void stop_listen_key(KeySym key);
 void tap(KeySym key);
 void define_secondary_role(KeySym pressed_key, KeySym key, Bool is_press, Mode *mode);
+void define_modifier(KeySym pressed_key, KeySym key, Bool is_press, Bool *modifier);
 
 void get_pointer()
 {
@@ -168,17 +171,15 @@ void init_x()
 void listen_key(KeySym key)
 {
     KeyCode key_code = XKeysymToKeycode(dpy, key);
+
     XGrabKey(dpy, key_code, 0, root, True, GrabModeAsync, GrabModeAsync);
-    XGrabKey(dpy, key_code, ControlMask, root, True, GrabModeAsync, GrabModeAsync);
-    XGrabKey(dpy, key_code, ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
 }
 
 void stop_listen_key(KeySym key)
 {
     KeyCode key_code = XKeysymToKeycode(dpy, key);
+
     XUngrabKey(dpy, key_code, 0, root);
-    XGrabKey(dpy, key_code, ControlMask, root, True, GrabModeAsync, GrabModeAsync);
-    XGrabKey(dpy, key_code, ShiftMask, root, True, GrabModeAsync, GrabModeAsync);
 }
 
 void tap(KeySym key)
@@ -208,7 +209,26 @@ void define_secondary_role(KeySym pressed_key, KeySym key, Bool is_press, Mode *
 
         (*mode).active = is_press;
         (*mode).secondary_role = False;
+
+        if ((*mode).active)
+        {
+            listen_key(XK_Control_L);
+            listen_key(XK_Shift_L);
+        }
+        else
+        {
+            control = False;
+            shift = False;
+            stop_listen_key(XK_Control_L);
+            stop_listen_key(XK_Shift_L);
+        }
     }
+}
+
+void define_modifier(KeySym pressed_key, KeySym key, Bool is_press, Bool *modifier)
+{
+    if (pressed_key == key)
+        *modifier = is_press;
 }
 
 void close_x(int exit_status)
@@ -257,8 +277,17 @@ void handle_key(KeyCode keycode, Bool is_press)
 
     keysym = XkbKeycodeToKeysym(dpy, keycode, 0, 0);
 
+    define_modifier(keysym, XK_Control_L, is_press, &control);
+    define_modifier(keysym, XK_Shift_L, is_press, &shift);
+
     define_secondary_role(keysym, XK_d, is_press, &mouse_mode);
     define_secondary_role(keysym, XK_space, is_press, &arrow_mode);
+
+    if (keysym == XK_Control_L)
+        printf("Control_L\n");
+
+    if (keysym == XK_Shift_L)
+        printf("Shift_L\n");
 
     if (arrow_mode.active)
     {
@@ -269,8 +298,29 @@ void handle_key(KeyCode keycode, Bool is_press)
             stop_listen_key(XK_space);
 
             KeyCode code = XKeysymToKeycode(dpy, XK_space);
+            KeyCode shift_key = XKeysymToKeycode(dpy, XK_Shift_L);
+            KeyCode control_key = XKeysymToKeycode(dpy, XK_Control_L);
 
             XTestFakeKeyEvent(dpy, code, False, CurrentTime);
+
+            Bool is_shift = shift;
+            Bool is_control = control;
+
+            if (is_shift)
+            {
+                stop_listen_key(XK_Shift_L);
+
+                XTestFakeKeyEvent(dpy, shift_key, False, CurrentTime);
+                XTestFakeKeyEvent(dpy, shift_key, True, CurrentTime);
+            }
+
+            if (is_control)
+            {
+                stop_listen_key(XK_Control_L);
+
+                XTestFakeKeyEvent(dpy, control_key, False, CurrentTime);
+                XTestFakeKeyEvent(dpy, control_key, True, CurrentTime);
+            }
 
             if (keysym == XK_i)
                 tap(XK_Up);
@@ -281,8 +331,28 @@ void handle_key(KeyCode keycode, Bool is_press)
             if (keysym == XK_l)
                 tap(XK_Right);
 
+            XTestFakeKeyEvent(dpy, control_key, False, CurrentTime);
+            XTestFakeKeyEvent(dpy, shift_key, False, CurrentTime);
+
+            listen_key(XK_Shift_L);
+            listen_key(XK_Control_L);
             listen_key(XK_space);
+
             XTestFakeKeyEvent(dpy, code, True, CurrentTime);
+
+            if (is_shift)
+            {
+                XTestFakeKeyEvent(dpy, shift_key, False, CurrentTime);
+                listen_key(XK_Shift_L);
+                XTestFakeKeyEvent(dpy, shift_key, True, CurrentTime);
+            }
+
+            if (is_control)
+            {
+                XTestFakeKeyEvent(dpy, control_key, False, CurrentTime);
+                listen_key(XK_Control_L);
+                XTestFakeKeyEvent(dpy, control_key, True, CurrentTime);
+            }
         }
     }
 
